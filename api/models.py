@@ -8,7 +8,7 @@ from django.contrib.contenttypes.fields import GenericForeignKey, GenericRelatio
 
 class Course(models.Model):
     title = models.CharField(max_length=32, verbose_name="课程名称")
-    course_img = models.FileField(default="/static/course_img/default.png", verbose_name="课程图片")
+    course_img = models.CharField(default="/static/course_img/default.png", max_length=128, verbose_name="课程图片")
     rank = (
         (1, "初级"),
         (2, "中级"),
@@ -16,6 +16,8 @@ class Course(models.Model):
     )
     level = models.IntegerField(choices=rank, default=1, verbose_name="课程难度")
     course_detail = models.OneToOneField(to="CourseDetail", on_delete=models.CASCADE, verbose_name="课程详情")
+
+    policy_list = GenericRelation(to="PricePolicy")
 
     def __str__(self):
         return self.title
@@ -127,3 +129,21 @@ class Comment(models.Model):
 
     class Meta:
         verbose_name_plural = "19.通用评论表"
+
+
+class PricePolicy(models.Model):
+    '''价格策略'''
+    content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+
+    # 不会在数据库中生成列,只用于帮助你进行添加和查询
+    content_object = GenericForeignKey('content_type', 'object_id')
+    price = models.CharField(default=99, verbose_name='价格', max_length=64)
+    date_choice = ((1, '一个月'), (2, '3个月'), (3, '6个月'), (4, '8个月'), (5, '1年'))
+    policy = models.SmallIntegerField(choices=date_choice, verbose_name='时间')
+
+    class Meta:
+        verbose_name_plural = '价格策略'
+
+    def __str__(self):
+        return '(%s)(%s)(%s元)' % (self.content_object, self.get_policy_display(), self.price)

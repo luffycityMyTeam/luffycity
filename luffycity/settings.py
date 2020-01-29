@@ -132,3 +132,15 @@ REST_FRAMEWORK = {
     'DEFAULT_VERSION': "v1",  # 默认版本
     'ALLOWED_VERSIONS': ['v1', 'v2']  # 允许的版本
 }
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": "redis://192.168.52.128",
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            "CONNECTION_POOL_KWARGS": {"max_connections": 100},
+            "PASSWORD": "xiaoli",
+        }
+    }
+}
