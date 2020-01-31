@@ -133,6 +133,7 @@ REST_FRAMEWORK = {
     'ALLOWED_VERSIONS': ['v1', 'v2']  # 允许的版本
 }
 
+# 缓存相关
 CACHES = {
     "default": {
         "BACKEND": "django_redis.cache.RedisCache",
@@ -144,3 +145,7 @@ CACHES = {
         }
     }
 }
+
+SHOPPING_CAR_KEY = 'shopping_car_%s_%s'
+PAYMENT_KEY = 'payment_%s_%s'
+PAYMENT_GLOBAL_KEY = 'payment_global_%s'

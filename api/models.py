@@ -18,6 +18,7 @@ class Course(models.Model):
     course_detail = models.OneToOneField(to="CourseDetail", on_delete=models.CASCADE, verbose_name="课程详情")
 
     policy_list = GenericRelation(to="PricePolicy")
+    coupon_list = GenericRelation(to="Coupon")
 
     def __str__(self):
         return self.title
@@ -139,7 +140,7 @@ class PricePolicy(models.Model):
     # 不会在数据库中生成列,只用于帮助你进行添加和查询
     content_object = GenericForeignKey('content_type', 'object_id')
     price = models.CharField(default=99, verbose_name='价格', max_length=64)
-    date_choice = ((1, '一个月'), (2, '3个月'), (3, '6个月'), (4, '8个月'), (5, '1年'))
+    date_choice = ((30, '一个月'), (90, '3个月'), (180, '6个月'), (240, '8个月'), (365, '1年'))
     policy = models.SmallIntegerField(choices=date_choice, verbose_name='时间')
 
     class Meta:
@@ -147,3 +148,67 @@ class PricePolicy(models.Model):
 
     def __str__(self):
         return '(%s)(%s)(%s元)' % (self.content_object, self.get_policy_display(), self.price)
+
+
+# ######################## 优惠券 ##########################
+class Coupon(models.Model):
+    """优惠劵生成规则, 运营人员添加"""
+    name = models.CharField(max_length=64, verbose_name="活动名称")
+    brief = models.TextField(blank=True, null=True, verbose_name="优惠券介绍")
+    coupon_type_choices = ((0, "立减券"), (1, "满减券"), (2, "折扣券"))
+    coupon_type = models.SmallIntegerField(choices=coupon_type_choices, default=0, verbose_name="券类型")
+    """
+    立减：
+        money_equivalent_value = 100 (减100元)
+                   off_percent = null
+               minimum_consume = 0   (最低0元可用)
+    满减：
+        money_equivalent_value = 100 (减100元)
+                   off_percent = null
+               minimum_consume = 500 (满500元可用)
+    折扣：
+        money_equivalent_value = 0
+                   off_percent = 79  (打7.9折)
+               minimum_consume = 300 (满300元可用)           
+    """
+    money_equivalent_value = models.IntegerField(verbose_name="等值货币")
+    off_percent = models.PositiveSmallIntegerField("折扣百分比", help_text="只针对折扣券,例7.9折，写79", blank=True, null=True)
+    minimum_consume = models.PositiveIntegerField("最低消费", default=0, help_text="仅在满减券时填写此字段")
+
+    content_type = models.ForeignKey(ContentType, blank=True, null=True, on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField("绑定课程", blank=True, null=True, help_text="可以把优惠券跟课程绑定")
+    content_object = GenericForeignKey("content_type", "object_id")
+
+    quantity = models.PositiveIntegerField("数量(张)", default=1)
+    open_date = models.DateField("优惠券领取开始时间")
+    close_date = models.DateField("优惠券领取结束时间")
+    valid_begin_date = models.DateField(verbose_name="有效期开始时间", blank=True, null=True)
+    valid_end_date = models.DateField(verbose_name="有效期结束时间", blank=True, null=True)
+    coupon_valid_days = models.PositiveIntegerField(verbose_name="优惠券有效期(天)", blank=True, null=True,
+                                                    help_text="自券被领时开始算起")
+    date = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name_plural = "31.优惠劵生成记录"
+
+    def __str__(self):
+        return "%s(%s)" % (self.get_coupon_type_display(), self.name)
+
+
+class CouponRecord(models.Model):
+    """优惠卷发放、消费记录"""
+    coupon = models.ForeignKey("Coupon", on_delete=models.CASCADE)
+    number = models.CharField(max_length=64, unique=True)
+    user = models.ForeignKey("UserInfo", verbose_name="拥有者", on_delete=models.CASCADE)
+    status_choices = ((0, '未使用'), (1, '已使用'), (2, '已过期'))
+    status = models.SmallIntegerField(choices=status_choices, default=0)
+    get_time = models.DateTimeField(verbose_name="领取时间", help_text="用户领取时间")
+    used_time = models.DateTimeField(blank=True, null=True, verbose_name="使用时间")
+    # order = models.ForeignKey("Order", blank=True, null=True, verbose_name="关联订单",
+    #                           on_delete=models.CASCADE)  # 一个订单可以有多个优惠券
+
+    class Meta:
+        verbose_name_plural = "32.用户优惠券"
+
+    def __str__(self):
+        return '%s-%s-%s' % (self.user, self.number, self.get_status_display())

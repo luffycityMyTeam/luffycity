@@ -14,5 +14,7 @@ admin.site.register(Article)
 admin.site.register(Comment)
 admin.site.register(Collection)
 admin.site.register(PricePolicy)
+admin.site.register(Coupon)
+admin.site.register(CouponRecord)
 
 
